@@ -3,7 +3,10 @@ export type Conta = {
     descricao: string;
     tipo: string;
     valor: number;
-    dataVencimento: string; // mantenha camelCase para consistência
+    data_vencimento: string; // mantenha camelCase para consistência
     responsavel?: string;
     pago: 'pago' | 'pendente' | 'vencido';
+    campo_opcional: number;
+    dataVencimento: string;
+    userId: number
 };

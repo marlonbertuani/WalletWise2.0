@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import CalendarioMensal from "../components/calendario";
 import type { Conta } from '../types/conta';
 import dayjs from 'dayjs';
+import { useNavigate } from "react-router";
 
 // Data de hoje no início do dia
 const hoje = dayjs().startOf('day');
@@ -12,28 +13,34 @@ export default function Dashboard() {
     const [contas, setContas] = useState<Conta[]>([]);
     const [modalCadastroOpen, setModalCadastroOpen] = useState(false);
     const [modalListaOpen, setModalListaOpen] = useState(false);
+    const navigate = useNavigate();
 
     // Simular carregamento dados (substituir por fetch real depois)
     useEffect(() => {
-        fetch('http://192.168.0.15:3000/api/contas') // Substitua pela URL real
-            .then(res => res.json())
-            .then((data) => {
-                const contasFormatadas: Conta[] = data.map((item: any) => ({
-                    id: item.account_id,
-                    descricao: item.descricao,
-                    tipo: item.tipo,
-                    valor: parseFloat(item.valor),
-                    dataVencimento: item.data_vencimento.split('T')[0], // ou new Date(item.data_vencimento)
-                    responsavel: item.responsavel,
-                    pago: item.estado,
-                }));
-
-                setContas(contasFormatadas);
-            })
-            .catch((err) => {
-                console.error('Erro ao buscar contas:', err);
-            });
+        carregarContas();
     }, []);
+
+    const carregarContas = async () => {
+        try {
+            const res = await fetch('http://192.168.0.15:3000/api/contas');
+            const data = await res.json();
+
+            const contasFormatadas: Conta[] = data.map((item: any) => ({
+                id: item.account_id,
+                descricao: item.descricao,
+                tipo: item.tipo,
+                valor: parseFloat(item.valor),
+                dataVencimento: item.data_vencimento.split('T')[0],
+                responsavel: item.responsavel,
+                pago: item.estado,
+                userId: item.user_id
+            }));
+
+            setContas(contasFormatadas);
+        } catch (err) {
+            console.error('Erro ao buscar contas:', err);
+        }
+    };
 
     // Calcular totais
     const valorTotal = contas
@@ -51,7 +58,10 @@ export default function Dashboard() {
         .reduce((acc, c) => acc + c.valor, 0);
 
     const valorTotalSemResponsavel = contas
-        .filter(c => !c.responsavel && !c.pago)
+        .filter(c => {
+            const data = dayjs(c.dataVencimento);
+            return !c.responsavel && c.pago !== 'pago' && data.isAfter(inicioMes) && data.isBefore(fimMes)
+        })
         .reduce((acc, c) => acc + c.valor, 0);
 
     // Filtra apenas contas com vencimento neste mês
@@ -63,7 +73,8 @@ export default function Dashboard() {
     // Valores agrupados por responsável
     const valoresPorResponsavel = contasDoMes.reduce<Record<string, number>>((acc, c) => {
         if (c.responsavel) {
-            acc[c.responsavel] = (acc[c.responsavel] || 0);
+            const valor = c.valor || 0;
+            acc[c.responsavel] = (acc[c.responsavel] || 0) + valor;
         }
         return acc;
     }, {});
@@ -74,64 +85,62 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col">
+        <div className="min-h-screen bg-gray-50 flex flex-col">
             {/* Navbar */}
-            <nav className="bg-gray-800 text-white shadow-md">
-                <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <h1 className="text-xl font-bold">WalletWise</h1>
-                    <div className="space-x-4">
+            <nav className="bg-indigo-700 text-white shadow-lg">
+                <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <h1 className="text-xl sm:text-2xl font-bold whitespace-nowrap">WalletWise</h1>
+
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                        {/* Botão Cadastrar Conta - Agora responsivo */}
                         <button
                             onClick={() => setModalCadastroOpen(true)}
-                            className="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-md text-sm font-semibold"
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium shadow-md transition-all duration-200 w-full sm:w-auto text-sm sm:text-base"
                         >
-                            Cadastrar Conta
+                            + Cadastrar Nova
                         </button>
+
+                        {/* Botão Contas Cadastradas - Agora responsivo */}
                         <button
-                            onClick={() => setModalListaOpen(true)}
-                            className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-md text-sm font-semibold"
+                            onClick={() => navigate("/contas")}
+                            className="bg-indigo-600 hover:bg-indigo-800 text-white px-3 py-2 sm:px-4 sm:py-2 rounded-lg font-medium border border-indigo-400 transition-colors duration-200 w-full sm:w-auto text-sm sm:text-base"
                         >
-                            Contas Cadastradas
+                            📋 Contas
                         </button>
                     </div>
                 </div>
             </nav>
-            <CalendarioMensal contas={contas} />
+            <CalendarioMensal contas={contas} userId={1} onAtualizarDados={carregarContas} />
             {/* Dashboard */}
-            <main className="container mx-auto p-6 flex-grow">
-                <section className="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
-                    <h2 className="text-2xl font-semibold mb-6 text-center">Resumo de Contas</h2>
-
-                    <p className="text-lg mb-3">
-                        <strong>Valor total de contas a vencer:</strong>{' '}
+            <main className="container mx-auto flex-grow">
+                <section className="bg-white p-1 rounded-lg shadow-md max-w-4xl mx-auto">
+                    <h2 className="text-2xl font-semibold text-center">Resumo de Contas</h2>
+                    <p className="text-md ml-4">
+                        <strong>Contas a vencer:</strong>{' '}
                         <span className="text-red-600 font-bold">{formatMoney(valorTotal)}</span>
                     </p>
-
-                    <p className="text-lg mb-3">
-                        <strong>Valor total de contas sem responsável:</strong>{' '}
+                    <p className="text-md ml-4">
+                        <strong>Contas sem responsável:</strong>{' '}
                         <span className="text-red-600 font-bold">{formatMoney(valorTotalSemResponsavel)}</span>
                     </p>
-
-                    <hr className="my-6" />
-
-                    <h3 className="text-xl font-semibold mb-4 text-center">Valores por responsável</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                    <hr className="" />
+                    <h3 className="text-xl font-semibold text-center">Valores por responsável</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-2">
                         {Object.entries(valoresPorResponsavel).length === 0 && (
                             <p className="col-span-full text-center text-gray-500">Nenhum responsável definido</p>
                         )}
                         {Object.entries(valoresPorResponsavel).map(([responsavel, valor]) => (
                             <div
                                 key={responsavel}
-                                className="bg-gray-100 rounded p-4 text-center shadow"
+                                className="bg-gray-200 rounded p-2 text-center shadow"
                             >
                                 <p className="font-semibold">{responsavel}</p>
                                 <p className="text-red-600 font-bold">{formatMoney(valor)}</p>
                             </div>
                         ))}
                     </div>
-
-                    <hr className="my-6" />
-
-                    <p className="text-lg">
+                    <hr className="" />
+                    <p className="text-lg ml-4">
                         <strong>Total pago este mês:</strong>{' '}
                         <span className="text-green-600 font-bold">{formatMoney(valorTotalPagoMes)}</span>
                     </p>
@@ -161,7 +170,7 @@ export default function Dashboard() {
                         {contas.map((conta) => (
                             <li key={conta.id} className="p-3 flex justify-between">
                                 <span className="font-semibold">{conta.descricao}</span>
-                                <span className="text-gray-600">{new Date(conta.dataVencimento).toLocaleDateString('pt-BR')}</span>
+                                <span className="text-gray-600">{new Date(conta.data_vencimento).toLocaleDateString('pt-BR')}</span>
                             </li>
                         ))}
                     </ul>
@@ -207,11 +216,13 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
     const [descricao, setDescricao] = useState('');
     const [tipo, setTipo] = useState('agua');
     const [valor, setValor] = useState('');
-    const [dataVencimento, setDataVencimento] = useState('');
+    const [data_vencimento, setDataVencimento] = useState('');
     const [responsavel, setResponsavel] = useState('');
     const [pago, setEstado] = useState<'pago' | 'pendente' | 'vencido'>('pendente');
+    const [campo_opcional, setcampo_opcional] = useState('');
+    const [user_id, setUserId] = useState(0);
 
-    function handleSubmit(e: React.FormEvent) {
+    async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
         const valorNum = parseFloat(valor.replace(',', '.'));
@@ -220,8 +231,25 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
             return;
         }
 
-        if (!descricao || !dataVencimento) {
+        if (!descricao || !data_vencimento) {
             alert('Preencha todos os campos obrigatórios');
+            return;
+        }
+
+        let campoOpcionalNum: number | number = 0;
+
+        if (campo_opcional.trim() !== '') {
+            const parsed = parseFloat(campo_opcional.replace(',', '.'));
+            if (isNaN(parsed)) {
+                alert('Campo opcional deve ser um número válido');
+                return;
+            }
+            campoOpcionalNum = parsed;
+        }
+
+        const userid = user_id;
+        if (isNaN(userid)) {
+            alert('Informe um valor válido');
             return;
         }
 
@@ -230,12 +258,22 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
             descricao,
             tipo,
             valor: valorNum,
-            dataVencimento,
+            data_vencimento,
             responsavel: responsavel || undefined,
             pago,
+            campo_opcional: campoOpcionalNum,
+            dataVencimento: data_vencimento,
+            userId: userid,
         };
 
-        onAddConta(novaConta);
+        try {
+            await enviarContaAPI(novaConta);
+            onAddConta(novaConta); // ainda chama isso se quiser atualizar a UI localmente
+            alert('Conta cadastrada com sucesso!');
+            onClose(); // opcional: fecha o formulário/modal
+        } catch {
+            alert('Erro ao cadastrar conta. Verifique a conexão ou tente novamente.');
+        }
     }
 
     return (
@@ -279,7 +317,6 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
-
             <div>
                 <label className="block font-medium mb-1" htmlFor="valor">
                     Valor
@@ -294,7 +331,6 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
-
             <div>
                 <label className="block font-medium mb-1" htmlFor="dataVencimento">
                     Data de Vencimento
@@ -302,26 +338,39 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
                 <input
                     type="date"
                     id="dataVencimento"
-                    value={dataVencimento}
+                    value={data_vencimento}
                     onChange={(e) => setDataVencimento(e.target.value)}
                     required
                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
             </div>
-
             <div>
                 <label className="block font-medium mb-1" htmlFor="responsavel">
                     Responsável (opcional)
                 </label>
-                <input
-                    type="text"
+                <select
                     id="responsavel"
                     value={responsavel}
-                    onChange={(e) => setResponsavel(e.target.value)}
+                    onChange={(e) => {
+                        const selected = e.target.value;
+                        if (selected === 'marlon') {
+                            setResponsavel('Marlon Bertuani');
+                            setUserId(1);
+                        } else if (selected === 'rosiane') {
+                            setResponsavel('Rosiane Bertuani');
+                            setUserId(2);
+                        } else {
+                            setResponsavel('');
+                            setUserId(0); // ou 0 ou undefined, dependendo da lógica
+                        }
+                    }}
                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                >
+                    <option value="">Selecione um responsável</option>
+                    <option value="marlon">Marlon</option>
+                    <option value="rosiane">Rosy</option>
+                </select>
             </div>
-
             <div>
                 <label className="block font-medium mb-1" htmlFor="estado">
                     Estado da Conta
@@ -336,6 +385,18 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
                     <option value="pago">Pago</option>
                     <option value="vencido">Vencido</option>
                 </select>
+            </div>
+            <div>
+                <label className="block font-medium mb-1" htmlFor="campo_opcional">
+                    Cod Barras (opcional)
+                </label>
+                <input
+                    type="number"
+                    id="campo_opcional"
+                    value={campo_opcional}
+                    onChange={(e) => setcampo_opcional(e.target.value)}
+                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
             </div>
             <div className="flex justify-end space-x-2 mt-4">
                 <button
@@ -354,4 +415,29 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
             </div>
         </form>
     );
+}
+
+// Funçoes do componente
+
+async function enviarContaAPI(conta: Conta) {
+    try {
+        const resposta = await fetch('http://192.168.0.15:3000/api/cadastro-conta', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(conta),
+
+        });
+
+        if (!resposta.ok) {
+            throw new Error('Erro ao enviar a conta para o servidor');
+        }
+
+        const dados = await resposta.json();
+        return dados;
+    } catch (erro) {
+        console.error('Erro ao enviar conta:', erro);
+        throw erro;
+    }
 }
