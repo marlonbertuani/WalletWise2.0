@@ -27,7 +27,7 @@ const TodasContas = () => {
 
     const consultarContas = (periodo?: boolean) => {
         setCarregando(true);
-        let url = "http://192.168.0.15:3000/api/consult-contas";
+        let url = "/api/consult-contas";
 
         if (periodo && dataInicio && dataFim) {
             url += `?inicio=${dataInicio}&fim=${dataFim}`;

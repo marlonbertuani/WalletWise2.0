@@ -26,7 +26,7 @@ export default function Login() {
     }
 
     try {
-      const res = await fetch("http://192.168.0.15:3000/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, senha }),

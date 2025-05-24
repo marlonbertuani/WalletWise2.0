@@ -14,7 +14,7 @@ const Calendar: React.FC<{
     contas: Conta[];
     userId: number;
     onAtualizarDados: () => Promise<void>; // ou só () => void se a função não for assíncrona
-}> = ({ contas, userId, onAtualizarDados }) => {
+}> = ({ contas, onAtualizarDados }) => {
 
     const [dias, setDias] = useState<CalendarDay[]>([]);
     const [modalAberto, setModalAberto] = useState(false);
@@ -60,7 +60,7 @@ const Calendar: React.FC<{
 
     const assumirConta = async (conta: Conta) => {
         try {
-            const response = await fetch("http://192.168.0.15:3000/api/contas/mudar-estado", {
+            const response = await fetch("/api/contas/mudar-estado", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -100,7 +100,7 @@ const Calendar: React.FC<{
         }
         console.log(conta.responsavel);
         try {
-            const response = await fetch("http://192.168.0.15:3000/api/contas/mudar-estado", {
+            const response = await fetch("/api/contas/mudar-estado", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

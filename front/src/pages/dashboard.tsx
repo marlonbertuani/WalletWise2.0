@@ -22,7 +22,7 @@ export default function Dashboard() {
 
     const carregarContas = async () => {
         try {
-            const res = await fetch('http://192.168.0.15:3000/api/contas');
+            const res = await fetch('/api/contas');
             const data = await res.json();
 
             const contasFormatadas: Conta[] = data.map((item: any) => ({
@@ -421,7 +421,7 @@ function CadastroForm({ onAddConta, onClose }: CadastroFormProps) {
 
 async function enviarContaAPI(conta: Conta) {
     try {
-        const resposta = await fetch('http://192.168.0.15:3000/api/cadastro-conta', {
+        const resposta = await fetch('/api/cadastro-conta', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

@@ -1,0 +1,36 @@
+# Use a imagem oficial do Node.js como a base para construir o app
+FROM node:24-slim AS build
+
+# Defina o diretório de trabalho no contêiner
+WORKDIR /app
+
+# Copie o package.json e o package-lock.json para o diretório de trabalho
+COPY package*.json ./
+
+# Instale as dependências
+RUN npm install
+
+# Copie o restante do código-fonte do aplicativo
+COPY . .
+
+# Construa o aplicativo para produção
+RUN npm run build
+
+# Use a imagem oficial do Nginx como a base para servir o app
+FROM nginx:alpine
+
+# Copie os arquivos de build do aplicativo React para o diretório de serviço Nginx
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Copia imagens estáticas que não são processadas pelo Vite
+COPY src/img /usr/share/nginx/html/src/img
+
+# Copie o arquivo de configuração do Nginx
+COPY nginx.conf /etc/nginx/nginx.conf
+COPY default.conf /etc/nginx/conf.d/default.conf
+
+# Exponha a porta 80 para acessar o aplicativo
+EXPOSE 80
+
+# Comando para iniciar o Nginx
+CMD ["nginx", "-g", "daemon off;"]
