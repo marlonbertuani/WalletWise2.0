@@ -33,7 +33,8 @@ export default function Dashboard() {
                 dataVencimento: item.data_vencimento.split('T')[0],
                 responsavel: item.responsavel,
                 pago: item.estado,
-                userId: item.user_id
+                userId: item.user_id,
+                campo_opcional: item.campo_opcional
             }));
 
             setContas(contasFormatadas);

@@ -8,5 +8,5 @@ export type Conta = {
     pago: 'pago' | 'pendente' | 'vencido';
     campo_opcional: number;
     dataVencimento: string;
-    userId: number
+    userId: number;
 };

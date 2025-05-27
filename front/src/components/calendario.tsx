@@ -175,6 +175,7 @@ const Calendar: React.FC<{
 
                         {contasSelecionadas.map((conta, idx) => (
                             <div key={idx} className="border-b py-2">
+                                <p><strong>ID:</strong> {conta.id}</p>
                                 <p><strong>Descrição:</strong> {conta.descricao}</p>
                                 <p><strong>Responsável:</strong> {conta.responsavel ?? '---'}</p>
                                 <p><strong>Valor:</strong> R$ {conta.valor.toFixed(2)}</p>
